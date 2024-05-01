@@ -37,7 +37,7 @@ class AgentState(TypedDict):
    # outcome of a given call to the agent
    agent_outcome: Union[AgentAction, AgentFinish, None]
    # list of actions and corresponding observations
-   # 'add' is so that the state is added to the existing values, (does not overwrite it)
+   # 'add' is so that the state is added to the existing values, (it does not overwrite it)
    intermediate_steps: Annotated[list[tuple[AgentAction, str]], operator.add]
 
 
@@ -58,7 +58,6 @@ tools = [to_lower_case, random_number_maker]
 # DEFINE THE AGENT
 agent_runnable = create_openai_functions_agent(llm, tools, prompt)
 
-# not sure what this is
 agent = RunnablePassthrough.assign(
     agent_outcome = agent_runnable
 )
@@ -72,7 +71,7 @@ agent_outcome = agent_runnable.invoke(inputs)
 # GIVES ABILITY TO EXECUTE THE TOOLS
 tool_executor = ToolExecutor(tools)
 
-# DEFINE AGENT/GRAPH
+# DEFINE NODES
 def run_agent(data):
     agent_outcome = agent_runnable.invoke(data)
     return {"agent_outcome": agent_outcome}
@@ -101,6 +100,7 @@ def should_continue(data):
 
 # DEFINE THE GRAPH
 workflow = StateGraph(AgentState)
+
 workflow.add_node("agent", run_agent)
 workflow.add_node("action", execute_tools)
 workflow.set_entry_point("agent")
@@ -113,6 +113,8 @@ workflow.add_conditional_edges(
     }
 )
 workflow.add_edge('action', 'agent')
+
+
 #
 # COMPILE GRAPH
 app = workflow.compile()
